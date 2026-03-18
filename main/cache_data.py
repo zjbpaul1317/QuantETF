@@ -15,10 +15,16 @@ from quant_etf.data import ETFDataRepository
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Fetch ETF history via AkShare and cache it to local CSV files.")
+    parser = argparse.ArgumentParser(description="Fetch ETF history from the configured provider and cache it locally.")
     parser.add_argument("--config-dir", default="configs", help="Configuration directory path.")
     parser.add_argument("--start-date", default=None, help="Optional override start date, e.g. 2023-01-01")
     parser.add_argument("--end-date", default=None, help="Optional override end date, e.g. 2025-12-31")
+    parser.add_argument(
+        "--provider",
+        default=None,
+        choices=["tushare", "akshare"],
+        help="Optional remote data provider override. Default: config.data.provider",
+    )
     parser.add_argument(
         "--output-dir",
         default=None,
@@ -28,6 +34,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--combined",
         action="store_true",
         help="Also write one combined CSV file in addition to per-symbol files.",
+    )
+    parser.add_argument(
+        "--force-reload",
+        action="store_true",
+        help="Ignore local cache and rebuild the requested date range from the remote provider.",
     )
     return parser
 
@@ -46,19 +57,26 @@ def main() -> int:
             start_date=args.start_date or config.backtest.start_date,
             end_date=args.end_date or config.backtest.end_date,
         ),
-        data=replace(config.data, provider="akshare", raw_dir=output_dir),
+        data=replace(config.data, provider=args.provider or config.data.provider, raw_dir=output_dir),
     )
 
     try:
         history = ETFDataRepository(fetch_config).load_history(
             start_date=fetch_config.backtest.start_date,
             end_date=fetch_config.backtest.end_date,
+            force_reload=args.force_reload,
         )
+    except FileNotFoundError as exc:
+        print("Cache build failed: no ETF history was returned for the requested symbols.")
+        print(str(exc))
+        return 1
     except RuntimeError as exc:
         print("Cache build failed while downloading market data.")
         print(str(exc))
         if "AkShare failed" in str(exc):
             print("Tip: AkShare upstream may be temporarily unstable. Please retry later or shorten the date range.")
+        if "Tushare" in str(exc):
+            print("Tip: verify your Tushare token and account permissions, then retry.")
         return 1
 
     frame = history.reset_index().copy()
@@ -83,11 +101,11 @@ def main() -> int:
         }
     )
 
-    symbol_count = 0
-    for symbol, snapshot in export_frame.groupby("symbol", sort=True):
-        path = output_dir / f"{symbol}.csv"
-        snapshot.to_csv(path, index=False)
-        symbol_count += 1
+    symbol_count = export_frame["symbol"].nunique()
+    if fetch_config.data.provider != "tushare":
+        for symbol, snapshot in export_frame.groupby("symbol", sort=True):
+            path = output_dir / f"{symbol}.csv"
+            snapshot.to_csv(path, index=False)
 
     if args.combined:
         combined_path = output_dir / "etf_daily.csv"

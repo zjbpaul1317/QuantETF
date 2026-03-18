@@ -40,7 +40,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--provider",
         default=None,
-        choices=["akshare", "local"],
+        choices=["akshare", "local", "tushare"],
         help="Optional data provider override.",
     )
     return parser
@@ -66,15 +66,22 @@ def main() -> int:
                 output_dir=args.output_dir,
             )
     except FileNotFoundError as exc:
-        print("Backtest failed: historical ETF files were not found.")
+        message = str(exc)
+        if "returned no ETF history" in message:
+            print("Backtest failed: the selected data provider returned no ETF history.")
+        else:
+            print("Backtest failed: historical ETF files were not found.")
         print(str(exc))
-        print("Tip: run with --data-dir /path/to/your/etf/files and optional --file-format csv|parquet")
+        if "returned no ETF history" not in message:
+            print("Tip: run with --data-dir /path/to/your/etf/files and optional --file-format csv|parquet")
         return 1
     except RuntimeError as exc:
         print("Backtest failed while loading market data.")
         print(str(exc))
         if "AkShare failed" in str(exc):
             print("Tip: this usually means the AkShare upstream source was temporarily unavailable. Please retry later.")
+        if "Tushare" in str(exc):
+            print("Tip: verify your Tushare token configuration before retrying.")
         return 1
 
     metrics = result.backtest.metrics

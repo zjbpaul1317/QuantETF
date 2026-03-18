@@ -36,6 +36,7 @@ class AppSettings:
 @dataclass(frozen=True)
 class DataConfig:
     provider: str = "local"
+    tushare_token: str | None = None
     adjustment: str = "qfq"
     price_frequency: str = "1d"
     raw_dir: Path = Path("data/raw")
@@ -56,6 +57,7 @@ class DataConfig:
     adj_factor_column: str = "adj_factor"
     use_adjusted_price: bool = True
     fill_missing_ohlc_from_close: bool = True
+    incremental_update_lookback_days: int = 5
 
 
 @dataclass(frozen=True)
@@ -188,6 +190,7 @@ class AppConfig:
             ),
             data=DataConfig(
                 provider=data_raw.get("provider", "local"),
+                tushare_token=data_raw.get("tushare_token"),
                 adjustment=data_raw.get("adjustment", "qfq"),
                 price_frequency=data_raw.get("price_frequency", "1d"),
                 raw_dir=_path(data_raw.get("raw_dir", "data/raw"), root),
@@ -208,6 +211,7 @@ class AppConfig:
                 adj_factor_column=data_raw.get("adj_factor_column", "adj_factor"),
                 use_adjusted_price=_bool(data_raw.get("use_adjusted_price"), True),
                 fill_missing_ohlc_from_close=_bool(data_raw.get("fill_missing_ohlc_from_close"), True),
+                incremental_update_lookback_days=int(data_raw.get("incremental_update_lookback_days", 5)),
             ),
             universe=UniverseConfig(
                 symbols=list(universe_raw.get("symbols", [])),

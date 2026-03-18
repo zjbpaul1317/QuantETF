@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import replace
 from pathlib import Path
 import sys
 
@@ -46,7 +47,11 @@ def main() -> int:
         holdings = _load_holdings(args.holdings_csv)
         result = run_signal_pipeline(config, current_holdings=holdings)
     except FileNotFoundError as exc:
-        print("Signal generation failed: no local historical data files were found.")
+        message = str(exc)
+        if "returned no ETF history" in message:
+            print("Signal generation failed: the selected data provider returned no ETF history.")
+        else:
+            print("Signal generation failed: no local historical data files were found.")
         print(str(exc))
         return 1
     except RuntimeError as exc:
@@ -54,6 +59,8 @@ def main() -> int:
         print(str(exc))
         if "AkShare failed" in str(exc):
             print("Tip: this usually means the AkShare upstream source was temporarily unavailable. Please retry later.")
+        if "Tushare" in str(exc):
+            print("Tip: verify your Tushare token configuration before retrying.")
         return 1
 
     latest_date = pd.to_datetime(result.weekly_signals["date"]).max() if not result.weekly_signals.empty else None

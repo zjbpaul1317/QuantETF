@@ -3,7 +3,8 @@ app:
   timezone: Asia/Shanghai
 
 data:
-  provider: akshare
+  provider: tushare
+  tushare_token:
   adjustment: qfq
   price_frequency: 1d
   raw_dir: data/raw
@@ -24,6 +25,7 @@ data:
   adj_factor_column: adj_factor
   use_adjusted_price: true
   fill_missing_ohlc_from_close: true
+  incremental_update_lookback_days: 5
 
 report:
   output_dir: data/reports
