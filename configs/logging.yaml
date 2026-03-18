@@ -1,0 +1,5 @@
+logging:
+  level: INFO
+  file: data/reports/quant_etf.log
+  rotation: 10 MB
+  retention: 10 days

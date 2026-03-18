@@ -1,0 +1,35 @@
+app:
+  name: quant-etf
+  timezone: Asia/Shanghai
+
+data:
+  provider: local
+  adjustment: qfq
+  price_frequency: 1d
+  raw_dir: data/raw
+  processed_dir: data/processed
+  cache_dir: data/cache
+  report_dir: data/reports
+  file_format: auto
+  file_pattern: "{symbol}.{ext}"
+  combined_file_name: etf_daily
+  symbol_column: symbol
+  date_column: trade_date
+  open_column: open
+  high_column: high
+  low_column: low
+  close_column: close
+  volume_column: volume
+  amount_column: amount
+  adj_factor_column: adj_factor
+  use_adjusted_price: true
+  fill_missing_ohlc_from_close: true
+
+report:
+  output_dir: data/reports
+  export_html: true
+  export_csv: true
+
+logging:
+  level: INFO
+  file: data/reports/quant_etf.log

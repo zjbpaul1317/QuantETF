@@ -1,0 +1,13 @@
+backtest:
+  start_date: 2018-01-01
+  end_date: 2025-12-31
+  initial_capital: 1000000.0
+  benchmark_symbol: 510300.SH
+  trade_price_field: open
+  risk_free_rate: 0.02
+
+cost:
+  commission_rate: 0.0003
+  slippage_rate: 0.0005
+  stamp_duty_rate: 0.0
+  min_commission: 5.0

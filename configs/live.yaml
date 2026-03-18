@@ -1,0 +1,8 @@
+live:
+  enabled: false
+  dry_run: true
+  broker: qmt
+  account_id: null
+  signal_output_path: data/reports/live_signals.csv
+  order_output_path: data/reports/live_orders.csv
+  max_retries: 3

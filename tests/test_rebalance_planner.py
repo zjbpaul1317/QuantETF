@@ -1,0 +1,143 @@
+from dataclasses import replace
+
+import numpy as np
+import pandas as pd
+
+from quant_etf.config import load_app_config
+from quant_etf.filter import HoldingExitFilter
+from quant_etf.portfolio import RebalancePlanner, TargetPortfolioBuilder
+from quant_etf.signal import SignalEngine
+
+
+def _build_portfolio_test_config():
+    config = load_app_config("configs", env_prefix=None)
+    return replace(
+        config,
+        strategy=replace(
+            config.strategy,
+            ma_window=60,
+            lookback_windows=(20, 60, 120),
+            score_weights=(0.4, 0.4, 0.2),
+            buy_top_n=3,
+            hold_buffer_n=5,
+            enable_buffer_hold=True,
+            stoploss_ma_ratio=0.98,
+            signal_weekday=4,
+        ),
+        universe=replace(
+            config.universe,
+            symbols=["510300.SH", "159915.SZ", "510500.SH", "516160.SH", "512100.SH", "512880.SH"],
+            min_listed_days=120,
+            liquidity_lookback=20,
+            min_avg_turnover=10_000_000.0,
+        ),
+    )
+
+
+def _build_portfolio_history() -> pd.DataFrame:
+    dates = pd.bdate_range("2024-01-01", "2024-07-05")
+    symbols = {
+        "510300.SH": {"start": 3.0, "slope": 0.0030, "volume": 12_000_000},
+        "159915.SZ": {"start": 1.0, "slope": 0.0024, "volume": 20_000_000},
+        "510500.SH": {"start": 5.0, "slope": 0.0016, "volume": 8_000_000},
+        "516160.SH": {"start": 1.5, "slope": 0.0011, "volume": 9_000_000},
+        "512100.SH": {"start": 0.9, "slope": -0.0010, "volume": 18_000_000},
+        "512880.SH": {"start": 1.2, "slope": 0.0028, "volume": 30_000},
+    }
+
+    frames: list[pd.DataFrame] = []
+    for symbol, params in symbols.items():
+        close = params["start"] * np.power(1 + params["slope"], np.arange(len(dates)))
+        frame = pd.DataFrame(
+            {
+                "trade_date": dates,
+                "symbol": symbol,
+                "open": close * 0.998,
+                "high": close * 1.002,
+                "low": close * 0.997,
+                "close": close,
+                "volume": float(params["volume"]),
+                "amount": close * params["volume"],
+                "adj_factor": 1.0,
+            }
+        )
+        frames.append(frame)
+
+    return pd.concat(frames, ignore_index=True).set_index(["trade_date", "symbol"]).sort_index()
+
+
+def test_exit_filter_flags_sell_conditions() -> None:
+    config = _build_portfolio_test_config()
+    exit_filter = HoldingExitFilter(config)
+    snapshot = pd.DataFrame(
+        {
+            "date": [pd.Timestamp("2024-07-05"), pd.Timestamp("2024-07-05"), pd.Timestamp("2024-07-05")],
+            "symbol": ["AAA.SH", "BBB.SH", "CCC.SH"],
+            "close": [0.95, 1.10, 1.20],
+            "ma60": [1.00, 1.00, 1.00],
+            "score": [0.10, -0.01, 0.08],
+            "rank": [2, 3, 6],
+            "eligible": [True, False, True],
+            "hold_signal": [True, False, False],
+        }
+    )
+    holdings = pd.DataFrame({"symbol": ["AAA.SH", "BBB.SH", "CCC.SH"], "current_weight": [0.33, 0.33, 0.34]})
+
+    result = exit_filter.apply(snapshot, holdings)
+    reason_map = result.set_index("symbol")["exit_reason"].to_dict()
+    should_sell_map = result.set_index("symbol")["should_sell"].to_dict()
+
+    assert should_sell_map["AAA.SH"]
+    assert reason_map["AAA.SH"] == "stoploss"
+    assert should_sell_map["BBB.SH"]
+    assert "score_non_positive" in reason_map["BBB.SH"]
+    assert should_sell_map["CCC.SH"]
+    assert "rank_out_of_buffer" in reason_map["CCC.SH"]
+
+
+def test_rebalance_planner_keeps_buffer_name_and_fills_open_slots() -> None:
+    config = _build_portfolio_test_config()
+    history = _build_portfolio_history()
+    weekly_signals = SignalEngine(config).generate(history).weekly_signals
+    holdings = pd.DataFrame(
+        {
+            "symbol": ["510300.SH", "516160.SH", "512100.SH"],
+            "current_weight": [1 / 3, 1 / 3, 1 / 3],
+        }
+    )
+
+    result = RebalancePlanner(config).plan(weekly_signals, holdings)
+
+    target_symbols = result.target_portfolio["symbol"].tolist()
+    action_map = result.rebalance_plan.set_index("symbol")["action"].to_dict()
+    reason_map = result.rebalance_plan.set_index("symbol")["trade_reason"].to_dict()
+
+    assert target_symbols == ["510300.SH", "159915.SZ", "516160.SH"]
+    assert action_map["512100.SH"] == "sell"
+    assert "score_non_positive" in reason_map["512100.SH"]
+    assert action_map["159915.SZ"] == "buy"
+    assert reason_map["159915.SZ"] == "new_buy"
+    assert result.target_portfolio.set_index("symbol").loc["516160.SH", "hold_reason"] == "keep_buffer"
+    assert np.isclose(result.target_portfolio["target_weight"].sum(), 0.99)
+
+
+def test_target_portfolio_builder_supports_risk_off_and_disable_buffer_hold() -> None:
+    config = replace(
+        _build_portfolio_test_config(),
+        strategy=replace(_build_portfolio_test_config().strategy, enable_buffer_hold=False),
+        market_regime=replace(_build_portfolio_test_config().market_regime, risk_off_action="reduce", risk_off_exposure=0.3),
+    )
+    history = _build_portfolio_history()
+    weekly_signals = SignalEngine(config).generate(history).weekly_signals
+    holdings = pd.DataFrame(
+        {
+            "symbol": ["510300.SH", "516160.SH", "512100.SH"],
+            "current_weight": [1 / 3, 1 / 3, 1 / 3],
+        }
+    )
+
+    target = TargetPortfolioBuilder(config).build(weekly_signals, current_holdings=holdings, market_regime_on=False)
+
+    assert target["symbol"].tolist() == ["510300.SH", "159915.SZ", "510500.SH"]
+    assert np.isclose(target["target_weight"].sum(), 0.3)
+    assert set(target["hold_reason"]) == {"risk_off_scaled"}

@@ -1,0 +1,23 @@
+universe:
+  symbols:
+    - 510300.SH
+    - 510500.SH
+    - 159915.SZ
+    - 159949.SZ
+    - 512100.SH
+    - 512880.SH
+    - 515790.SH
+    - 516160.SH
+  blacklist: []
+  min_listed_days: 120
+  liquidity_lookback: 20
+  min_avg_turnover: 100000000.0
+  min_avg_volume: 1000000.0
+
+market_regime:
+  enabled: true
+  hs300_symbol: 510300.SH
+  zz1000_symbol: 512100.SH
+  ma_window: 60
+  risk_off_action: flat
+  risk_off_exposure: 0.0
