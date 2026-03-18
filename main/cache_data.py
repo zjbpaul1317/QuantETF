@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 from dataclasses import replace
 from pathlib import Path
 import sys
+from zoneinfo import ZoneInfo
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = PROJECT_ROOT / "src"
@@ -19,6 +21,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--config-dir", default="configs", help="Configuration directory path.")
     parser.add_argument("--start-date", default=None, help="Optional override start date, e.g. 2023-01-01")
     parser.add_argument("--end-date", default=None, help="Optional override end date, e.g. 2025-12-31")
+    parser.add_argument(
+        "--today",
+        action="store_true",
+        help="Fetch and cache the current trading day's snapshot using app.timezone as both start and end date.",
+    )
     parser.add_argument(
         "--provider",
         default=None,
@@ -43,9 +50,26 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _today_in_timezone(timezone: str) -> str:
+    return datetime.now(ZoneInfo(timezone)).strftime("%Y-%m-%d")
+
+
+def _resolve_requested_dates(args: argparse.Namespace, timezone: str, default_start: str, default_end: str) -> tuple[str, str]:
+    if args.today:
+        today = _today_in_timezone(timezone)
+        return today, today
+    return args.start_date or default_start, args.end_date or default_end
+
+
 def main() -> int:
     args = build_parser().parse_args()
     config = load_app_config(args.config_dir, env_prefix=None)
+    start_date, end_date = _resolve_requested_dates(
+        args,
+        timezone=config.app.timezone,
+        default_start=config.backtest.start_date,
+        default_end=config.backtest.end_date,
+    )
 
     output_dir = Path(args.output_dir).resolve() if args.output_dir else config.data.raw_dir
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -54,8 +78,8 @@ def main() -> int:
         config,
         backtest=replace(
             config.backtest,
-            start_date=args.start_date or config.backtest.start_date,
-            end_date=args.end_date or config.backtest.end_date,
+            start_date=start_date,
+            end_date=end_date,
         ),
         data=replace(config.data, provider=args.provider or config.data.provider, raw_dir=output_dir),
     )
