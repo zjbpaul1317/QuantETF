@@ -59,8 +59,8 @@ def main() -> int:
         print(str(exc))
         if "AkShare failed" in str(exc):
             print("Tip: this usually means the AkShare upstream source was temporarily unavailable. Please retry later.")
-        if "Tushare" in str(exc):
-            print("Tip: verify your Tushare token configuration before retrying.")
+        if "easyquotation" in str(exc) or "EasyQuotation" in str(exc):
+            print("Tip: easyquotation cannot backfill missing historical ETF bars; seed the local cache first or use local CSV data.")
         return 1
 
     latest_date = pd.to_datetime(result.weekly_signals["date"]).max() if not result.weekly_signals.empty else None

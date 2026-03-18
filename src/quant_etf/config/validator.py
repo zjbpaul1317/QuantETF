@@ -16,7 +16,10 @@ def _ensure(condition: bool, message: str) -> None:
 
 def validate_app_config(config: AppConfig) -> None:
     _ensure(bool(config.universe.symbols), "universe.symbols must not be empty")
-    _ensure(config.data.provider in {"local", "akshare", "tushare"}, "data.provider must be local, akshare or tushare")
+    _ensure(
+        config.data.provider in {"local", "akshare", "easyquotation"},
+        "data.provider must be local, akshare or easyquotation",
+    )
     _ensure(config.data.adjustment in {"none", "qfq", "hfq"}, "data.adjustment must be one of none, qfq, hfq")
     _ensure(config.data.file_format in {"auto", "csv", "parquet"}, "data.file_format must be auto, csv or parquet")
     _ensure("{symbol}" in config.data.file_pattern and "{ext}" in config.data.file_pattern,

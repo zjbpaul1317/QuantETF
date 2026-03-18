@@ -40,7 +40,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--provider",
         default=None,
-        choices=["akshare", "local", "tushare"],
+        choices=["akshare", "easyquotation", "local"],
         help="Optional data provider override.",
     )
     return parser
@@ -80,8 +80,8 @@ def main() -> int:
         print(str(exc))
         if "AkShare failed" in str(exc):
             print("Tip: this usually means the AkShare upstream source was temporarily unavailable. Please retry later.")
-        if "Tushare" in str(exc):
-            print("Tip: verify your Tushare token configuration before retrying.")
+        if "easyquotation" in str(exc) or "EasyQuotation" in str(exc):
+            print("Tip: easyquotation cannot backfill missing historical ETF bars; seed the local cache first or use --provider local.")
         return 1
 
     metrics = result.backtest.metrics

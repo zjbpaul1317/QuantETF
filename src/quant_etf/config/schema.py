@@ -36,7 +36,6 @@ class AppSettings:
 @dataclass(frozen=True)
 class DataConfig:
     provider: str = "local"
-    tushare_token: str | None = None
     adjustment: str = "qfq"
     price_frequency: str = "1d"
     raw_dir: Path = Path("data/raw")
@@ -190,7 +189,6 @@ class AppConfig:
             ),
             data=DataConfig(
                 provider=data_raw.get("provider", "local"),
-                tushare_token=data_raw.get("tushare_token"),
                 adjustment=data_raw.get("adjustment", "qfq"),
                 price_frequency=data_raw.get("price_frequency", "1d"),
                 raw_dir=_path(data_raw.get("raw_dir", "data/raw"), root),

@@ -10,7 +10,7 @@ from .cleaner import ETFDataCleaner
 from .loader import LocalETFFileSource
 from .models import DataLoadRequest
 from .preprocessor import ETFDataPreprocessor
-from .providers import TushareETFSource
+from .providers import EasyQuotationETFSource
 from .source_akshare import AkShareETFSource
 from .source_base import ETFHistoryDataSource
 
@@ -31,12 +31,12 @@ class ETFDataRepository:
                 source = LocalETFFileSource(config.data)
             elif config.data.provider == "akshare":
                 source = AkShareETFSource(config.data)
-            elif config.data.provider == "tushare":
-                source = TushareETFSource(config.data)
+            elif config.data.provider == "easyquotation":
+                source = EasyQuotationETFSource(config.data)
             else:
                 raise NotImplementedError(
                     f"Data provider '{config.data.provider}' is reserved but not implemented yet. "
-                    "Use provider='local', 'akshare' or 'tushare' for the current pipeline."
+                    "Use provider='local', 'akshare' or 'easyquotation' for the current pipeline."
                 )
         self.source = source
         self.cleaner = cleaner or ETFDataCleaner(config.data)

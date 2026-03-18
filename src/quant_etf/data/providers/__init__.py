@@ -1,5 +1,5 @@
 """Provider implementations for remote ETF data sources."""
 
-from .tushare_provider import TushareETFSource
+from .easyquotation_provider import EasyQuotationETFSource
 
-__all__ = ["TushareETFSource"]
+__all__ = ["EasyQuotationETFSource"]

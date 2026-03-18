@@ -22,7 +22,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--provider",
         default=None,
-        choices=["tushare", "akshare"],
+        choices=["easyquotation", "akshare"],
         help="Optional remote data provider override. Default: config.data.provider",
     )
     parser.add_argument(
@@ -75,8 +75,8 @@ def main() -> int:
         print(str(exc))
         if "AkShare failed" in str(exc):
             print("Tip: AkShare upstream may be temporarily unstable. Please retry later or shorten the date range.")
-        if "Tushare" in str(exc):
-            print("Tip: verify your Tushare token and account permissions, then retry.")
+        if "easyquotation" in str(exc):
+            print("Tip: easyquotation only refreshes live snapshots; older days must already exist in your local cache.")
         return 1
 
     frame = history.reset_index().copy()
@@ -102,7 +102,7 @@ def main() -> int:
     )
 
     symbol_count = export_frame["symbol"].nunique()
-    if fetch_config.data.provider != "tushare":
+    if fetch_config.data.provider != "easyquotation":
         for symbol, snapshot in export_frame.groupby("symbol", sort=True):
             path = output_dir / f"{symbol}.csv"
             snapshot.to_csv(path, index=False)

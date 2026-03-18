@@ -3,8 +3,7 @@ app:
   timezone: Asia/Shanghai
 
 data:
-  provider: tushare
-  tushare_token:
+  provider: easyquotation
   adjustment: qfq
   price_frequency: 1d
   raw_dir: data/raw
