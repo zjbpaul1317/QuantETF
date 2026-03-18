@@ -108,7 +108,7 @@ class TradingConfig:
 
 @dataclass(frozen=True)
 class BacktestConfig:
-    start_date: str = "2018-01-01"
+    start_date: str = "2023-01-01"
     end_date: str = "2025-12-31"
     initial_capital: float = 1_000_000.0
     benchmark_symbol: str = "510300.SH"
@@ -250,7 +250,7 @@ class AppConfig:
                 min_trade_amount=float(trading_raw.get("min_trade_amount", 1_000.0)),
             ),
             backtest=BacktestConfig(
-                start_date=str(backtest_raw.get("start_date", "2018-01-01")),
+                start_date=str(backtest_raw.get("start_date", "2023-01-01")),
                 end_date=str(backtest_raw.get("end_date", "2025-12-31")),
                 initial_capital=float(backtest_raw.get("initial_capital", 1_000_000.0)),
                 benchmark_symbol=backtest_raw.get("benchmark_symbol", "510300.SH"),

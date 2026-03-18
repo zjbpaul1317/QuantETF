@@ -3,7 +3,7 @@ app:
   timezone: Asia/Shanghai
 
 data:
-  provider: local
+  provider: akshare
   adjustment: qfq
   price_frequency: 1d
   raw_dir: data/raw

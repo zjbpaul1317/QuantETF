@@ -10,6 +10,7 @@ from .cleaner import ETFDataCleaner
 from .loader import LocalETFFileSource
 from .models import DataLoadRequest
 from .preprocessor import ETFDataPreprocessor
+from .source_akshare import AkShareETFSource
 from .source_base import ETFHistoryDataSource
 
 
@@ -25,12 +26,15 @@ class ETFDataRepository:
     ) -> None:
         self.config = config
         if source is None:
-            if config.data.provider != "local":
+            if config.data.provider == "local":
+                source = LocalETFFileSource(config.data)
+            elif config.data.provider == "akshare":
+                source = AkShareETFSource(config.data)
+            else:
                 raise NotImplementedError(
                     f"Data provider '{config.data.provider}' is reserved but not implemented yet. "
-                    "Use provider='local' for the current historical file pipeline."
+                    "Use provider='local' or 'akshare' for the current pipeline."
                 )
-            source = LocalETFFileSource(config.data)
         self.source = source
         self.cleaner = cleaner or ETFDataCleaner(config.data)
         self.preprocessor = preprocessor or ETFDataPreprocessor(config.data)

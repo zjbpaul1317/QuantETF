@@ -37,19 +37,27 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["csv", "parquet", "auto"],
         help="Optional local history file format override.",
     )
+    parser.add_argument(
+        "--provider",
+        default=None,
+        choices=["akshare", "local"],
+        help="Optional data provider override.",
+    )
     return parser
 
 
 def main() -> int:
     args = build_parser().parse_args()
     try:
-        if args.data_dir or args.file_format:
+        if args.data_dir or args.file_format or args.provider:
             config = load_app_config(args.config_dir, env_prefix=None)
             data_config = config.data
             if args.data_dir:
                 data_config = replace(data_config, raw_dir=Path(args.data_dir).resolve(), provider="local")
             if args.file_format:
                 data_config = replace(data_config, file_format=args.file_format)
+            if args.provider:
+                data_config = replace(data_config, provider=args.provider)
             config = replace(config, data=data_config)
             result = run_backtest_with_config(config, output_dir=args.output_dir)
         else:
@@ -61,6 +69,12 @@ def main() -> int:
         print("Backtest failed: historical ETF files were not found.")
         print(str(exc))
         print("Tip: run with --data-dir /path/to/your/etf/files and optional --file-format csv|parquet")
+        return 1
+    except RuntimeError as exc:
+        print("Backtest failed while loading market data.")
+        print(str(exc))
+        if "AkShare failed" in str(exc):
+            print("Tip: this usually means the AkShare upstream source was temporarily unavailable. Please retry later.")
         return 1
 
     metrics = result.backtest.metrics

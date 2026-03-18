@@ -7,7 +7,7 @@ from quant_etf.backtest import BacktestEngine, BacktestResult
 from quant_etf.config import load_app_config
 from quant_etf.config.schema import AppConfig
 from quant_etf.data import ETFDataRepository
-from quant_etf.portfolio import TargetPortfolioBuilder
+from quant_etf.portfolio import RebalancePlanner, TargetPortfolioBuilder
 from quant_etf.report import export_backtest_bundle
 from quant_etf.signal import SignalEngine
 
@@ -20,6 +20,16 @@ class PipelineResult:
     target_portfolio: object
     backtest: BacktestResult
     output_paths: dict[str, Path]
+
+
+@dataclass(frozen=True)
+class SignalPipelineResult:
+    config: AppConfig
+    history_rows: int
+    daily_signals: object
+    weekly_signals: object
+    latest_target_portfolio: object
+    latest_rebalance_plan: object
 
 
 def run_backtest_with_config(
@@ -63,3 +73,28 @@ def run_backtest_pipeline(
 ) -> PipelineResult:
     config = load_app_config(config_dir, env_prefix=None)
     return run_backtest_with_config(config, output_dir=output_dir)
+
+
+def run_signal_pipeline(
+    config: AppConfig,
+    current_holdings: object | None = None,
+) -> SignalPipelineResult:
+    history = ETFDataRepository(config).load_history()
+    signal_result = SignalEngine(config).generate(history)
+    weekly_signals = signal_result.weekly_signals
+    latest_target = TargetPortfolioBuilder(config).build(
+        weekly_signals,
+        current_holdings=current_holdings,
+    )
+    latest_plan = RebalancePlanner(config).plan(
+        weekly_signals,
+        current_holdings=current_holdings,
+    ).rebalance_plan
+    return SignalPipelineResult(
+        config=config,
+        history_rows=len(history),
+        daily_signals=signal_result.daily_signals,
+        weekly_signals=weekly_signals,
+        latest_target_portfolio=latest_target,
+        latest_rebalance_plan=latest_plan,
+    )
