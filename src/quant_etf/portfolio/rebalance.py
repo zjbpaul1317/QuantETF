@@ -49,7 +49,7 @@ class RebalancePlanner:
     ) -> RebalanceResult:
         snapshot = self.target_builder.select_snapshot(weekly_signals, as_of_date=as_of_date)
         holdings = normalize_holdings(current_holdings)
-        exit_evaluation = self.exit_filter.apply(snapshot, holdings)
+        exit_evaluation = self.exit_filter.apply(weekly_signals, holdings, as_of_date=as_of_date)
         target_portfolio = self.target_builder.build(
             weekly_signals,
             current_holdings=holdings,

@@ -8,15 +8,18 @@ strategy:
   ma_window: 60
   score_threshold: 0.0
   buy_top_n: 3
-  hold_buffer_n: 5
+  hold_buffer_n: 6
   enable_buffer_hold: true
   stoploss_ma_ratio: 0.98
+  exit_confirm_weeks: 2
+  min_rebalance_weight_delta: 0.10
+  min_score_upgrade: 0.02
   weight_method: equal
 
 trading:
   lot_size: 100
   cash_reserve_ratio: 0.01
-  max_position_weight: 0.34
+  max_position_weight: 0.5
   allow_suspended_sell: false
   allow_limit_up_buy: false
   allow_limit_down_sell: false

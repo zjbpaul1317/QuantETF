@@ -74,6 +74,8 @@ def test_target_builder_build_all_tracks_rebalance_dates() -> None:
     )
     signals["hold_signal"] = True
     signals["eligible"] = True
+    signals["market_regime_on"] = True
+    signals["risk_off"] = False
 
     targets = TargetPortfolioBuilder(config).build_all(signals)
 

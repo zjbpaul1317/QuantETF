@@ -43,6 +43,8 @@ class BacktestEngine:
 
         self.lot_size = config.trading.lot_size
         self.risk_free_rate = config.backtest.risk_free_rate
+        self.execution_delay_days = int(config.strategy.execution_delay_days)
+        self.execution_timing = str(config.strategy.execution_timing)
 
     def run(
         self,
@@ -168,8 +170,8 @@ class BacktestEngine:
             for rebalance_date, snapshot in frame.groupby("rebalance_date", sort=True)
         }
 
-    @staticmethod
     def _build_execution_schedule(
+        self,
         trading_dates: list[pd.Timestamp],
         targets: dict[pd.Timestamp, pd.DataFrame],
         rebalance_dates: list[str | pd.Timestamp] | None = None,
@@ -183,9 +185,10 @@ class BacktestEngine:
         trading_index = pd.Index(trading_dates)
         for signal_date in signal_dates:
             loc = trading_index.searchsorted(signal_date, side="right")
-            if loc >= len(trading_index):
+            execution_loc = loc + self.execution_delay_days - 1
+            if execution_loc >= len(trading_index):
                 continue
-            execution_schedule[trading_index[loc]] = signal_date
+            execution_schedule[trading_index[execution_loc]] = signal_date
         return execution_schedule
 
     def _execute_rebalance(
@@ -198,8 +201,13 @@ class BacktestEngine:
         price_data: dict[str, object],
     ) -> tuple[float, float, list[dict[str, object]]]:
         open_prices = price_data["open_prices"].loc[trade_date]
+        close_prices = price_data["close_prices"].loc[trade_date]
         prev_close_prices = price_data["prev_close_prices"].loc[trade_date]
-        valuation_prices = open_prices.combine_first(prev_close_prices)
+        execution_prices, valuation_prices = self._resolve_execution_prices(
+            open_prices=open_prices,
+            close_prices=close_prices,
+            prev_close_prices=prev_close_prices,
+        )
 
         portfolio_value = cash
         for symbol, state in positions.items():
@@ -208,7 +216,7 @@ class BacktestEngine:
 
         target_quantity_map: dict[str, int] = {}
         for row in target_snapshot.itertuples(index=False):
-            price = open_prices.get(row.symbol)
+            price = execution_prices.get(row.symbol)
             if pd.isna(price) or price <= 0:
                 continue
             fill_price = float(price) * (1.0 + self.slippage_rate)
@@ -227,7 +235,7 @@ class BacktestEngine:
             if sell_quantity <= 0:
                 continue
 
-            price = open_prices.get(symbol)
+            price = execution_prices.get(symbol)
             if pd.isna(price) or price <= 0:
                 continue
             fill_price = float(price) * (1.0 - self.slippage_rate)
@@ -266,7 +274,7 @@ class BacktestEngine:
             if buy_quantity <= 0:
                 continue
 
-            price = open_prices.get(symbol)
+            price = execution_prices.get(symbol)
             if pd.isna(price) or price <= 0:
                 continue
 
@@ -303,6 +311,20 @@ class BacktestEngine:
             )
 
         return cash, traded_value, trades
+
+    def _resolve_execution_prices(
+        self,
+        open_prices: pd.Series,
+        close_prices: pd.Series,
+        prev_close_prices: pd.Series,
+    ) -> tuple[pd.Series, pd.Series]:
+        if self.execution_timing == "next_close":
+            execution_prices = close_prices.combine_first(open_prices).combine_first(prev_close_prices)
+            return execution_prices, execution_prices
+
+        execution_prices = open_prices.combine_first(prev_close_prices).combine_first(close_prices)
+        valuation_prices = open_prices.combine_first(prev_close_prices).combine_first(close_prices)
+        return execution_prices, valuation_prices
 
     def _mark_to_market(
         self,

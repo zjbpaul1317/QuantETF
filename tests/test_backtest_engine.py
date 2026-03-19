@@ -27,13 +27,14 @@ def _build_backtest_history() -> pd.DataFrame:
 
     frames: list[pd.DataFrame] = []
     for symbol, close in symbols.items():
+        open_price = close * 0.99
         frame = pd.DataFrame(
             {
                 "trade_date": dates,
                 "symbol": symbol,
-                "open": close,
+                "open": open_price,
                 "high": close * 1.001,
-                "low": close * 0.999,
+                "low": open_price * 0.999,
                 "close": close,
                 "volume": 1_000_000.0,
                 "amount": close * 1_000_000,
@@ -74,6 +75,37 @@ def test_backtest_engine_executes_on_next_trading_day() -> None:
     assert not result.trades.empty
     assert set(result.trades["trade_date"].dt.strftime("%Y-%m-%d")) == {"2024-01-08", "2024-01-15"}
     assert {"annual_return", "max_drawdown", "sharpe_ratio", "win_rate", "turnover_rate"}.issubset(result.metrics.keys())
+
+
+def test_backtest_engine_respects_execution_delay_days() -> None:
+    base_config = _build_backtest_config()
+    config = replace(base_config, strategy=replace(base_config.strategy, execution_delay_days=2))
+    history = _build_backtest_history()
+    targets = _build_target_portfolio()
+
+    result = BacktestEngine(config).run(history, targets)
+
+    assert set(result.trades["trade_date"].dt.strftime("%Y-%m-%d")) == {"2024-01-09", "2024-01-16"}
+
+
+def test_backtest_engine_uses_close_prices_for_next_close_execution() -> None:
+    base_config = _build_backtest_config()
+    config = replace(base_config, strategy=replace(base_config.strategy, execution_timing="next_close"))
+    history = _build_backtest_history()
+    targets = _build_target_portfolio()
+
+    result = BacktestEngine(config).run(history, targets)
+
+    first_buy = result.trades.loc[
+        (result.trades["trade_date"] == pd.Timestamp("2024-01-08"))
+        & (result.trades["symbol"] == "510300.SH")
+        & (result.trades["side"] == "BUY")
+    ].iloc[0]
+    expected_close = history.loc[(pd.Timestamp("2024-01-08"), "510300.SH"), "close"]
+    expected_open = history.loc[(pd.Timestamp("2024-01-08"), "510300.SH"), "open"]
+
+    assert first_buy["price"] == expected_close
+    assert first_buy["price"] != expected_open
 
 
 def test_backtest_engine_costs_reduce_final_nav() -> None:

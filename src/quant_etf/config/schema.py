@@ -76,8 +76,11 @@ class MarketRegimeConfig:
     hs300_symbol: str = "510300.SH"
     zz1000_symbol: str = "512100.SH"
     ma_window: int = 60
-    risk_off_action: str = "flat"
-    risk_off_exposure: float = 0.0
+    require_positive_score: bool = True
+    on_confirm_weeks: int = 2
+    off_confirm_weeks: int = 1
+    risk_off_action: str = "reduce"
+    risk_off_exposure: float = 0.34
 
 
 @dataclass(frozen=True)
@@ -91,9 +94,12 @@ class StrategyConfig:
     ma_window: int = 60
     score_threshold: float = 0.0
     buy_top_n: int = 3
-    hold_buffer_n: int = 5
+    hold_buffer_n: int = 6
     enable_buffer_hold: bool = True
     stoploss_ma_ratio: float = 0.98
+    exit_confirm_weeks: int = 2
+    min_rebalance_weight_delta: float = 0.10
+    min_score_upgrade: float = 0.02
     weight_method: str = "equal"
 
 
@@ -101,7 +107,7 @@ class StrategyConfig:
 class TradingConfig:
     lot_size: int = 100
     cash_reserve_ratio: float = 0.01
-    max_position_weight: float = 0.34
+    max_position_weight: float = 0.5
     allow_suspended_sell: bool = False
     allow_limit_up_buy: bool = False
     allow_limit_down_sell: bool = False
@@ -226,8 +232,11 @@ class AppConfig:
                 hs300_symbol=market_regime_raw.get("hs300_symbol", "510300.SH"),
                 zz1000_symbol=market_regime_raw.get("zz1000_symbol", "512100.SH"),
                 ma_window=int(market_regime_raw.get("ma_window", 60)),
-                risk_off_action=market_regime_raw.get("risk_off_action", "flat"),
-                risk_off_exposure=float(market_regime_raw.get("risk_off_exposure", 0.0)),
+                require_positive_score=_bool(market_regime_raw.get("require_positive_score"), True),
+                on_confirm_weeks=int(market_regime_raw.get("on_confirm_weeks", 2)),
+                off_confirm_weeks=int(market_regime_raw.get("off_confirm_weeks", 1)),
+                risk_off_action=market_regime_raw.get("risk_off_action", "reduce"),
+                risk_off_exposure=float(market_regime_raw.get("risk_off_exposure", 0.34)),
             ),
             strategy=StrategyConfig(
                 rebalance_frequency=strategy_raw.get("rebalance_frequency", "weekly"),
@@ -239,15 +248,18 @@ class AppConfig:
                 ma_window=int(strategy_raw.get("ma_window", 60)),
                 score_threshold=float(strategy_raw.get("score_threshold", 0.0)),
                 buy_top_n=int(strategy_raw.get("buy_top_n", 3)),
-                hold_buffer_n=int(strategy_raw.get("hold_buffer_n", 5)),
+                hold_buffer_n=int(strategy_raw.get("hold_buffer_n", 6)),
                 enable_buffer_hold=_bool(strategy_raw.get("enable_buffer_hold"), True),
                 stoploss_ma_ratio=float(strategy_raw.get("stoploss_ma_ratio", 0.98)),
+                exit_confirm_weeks=int(strategy_raw.get("exit_confirm_weeks", 2)),
+                min_rebalance_weight_delta=float(strategy_raw.get("min_rebalance_weight_delta", 0.10)),
+                min_score_upgrade=float(strategy_raw.get("min_score_upgrade", 0.02)),
                 weight_method=strategy_raw.get("weight_method", "equal"),
             ),
             trading=TradingConfig(
                 lot_size=int(trading_raw.get("lot_size", 100)),
                 cash_reserve_ratio=float(trading_raw.get("cash_reserve_ratio", 0.01)),
-                max_position_weight=float(trading_raw.get("max_position_weight", 0.34)),
+                max_position_weight=float(trading_raw.get("max_position_weight", 0.5)),
                 allow_suspended_sell=bool(trading_raw.get("allow_suspended_sell", False)),
                 allow_limit_up_buy=bool(trading_raw.get("allow_limit_up_buy", False)),
                 allow_limit_down_sell=bool(trading_raw.get("allow_limit_down_sell", False)),

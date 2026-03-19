@@ -34,15 +34,24 @@ def validate_app_config(config: AppConfig) -> None:
     _ensure(config.strategy.buy_top_n > 0, "strategy.buy_top_n must be positive")
     _ensure(config.strategy.hold_buffer_n >= config.strategy.buy_top_n,
             "strategy.hold_buffer_n must be >= strategy.buy_top_n")
+    _ensure(config.strategy.execution_delay_days > 0, "strategy.execution_delay_days must be positive")
+    _ensure(config.strategy.execution_timing in {"next_open", "next_close"},
+            "strategy.execution_timing must be 'next_open' or 'next_close'")
     if not config.strategy.enable_buffer_hold:
         _ensure(
             config.strategy.hold_buffer_n >= config.strategy.buy_top_n,
             "strategy.hold_buffer_n must still be >= strategy.buy_top_n when buffer hold is disabled",
         )
     _ensure(0 < config.strategy.stoploss_ma_ratio <= 1.5, "strategy.stoploss_ma_ratio must be in (0, 1.5]")
+    _ensure(config.strategy.exit_confirm_weeks > 0, "strategy.exit_confirm_weeks must be positive")
+    _ensure(0.0 <= config.strategy.min_rebalance_weight_delta <= 1.0,
+            "strategy.min_rebalance_weight_delta must be within [0, 1]")
+    _ensure(config.strategy.min_score_upgrade >= 0.0, "strategy.min_score_upgrade must be non-negative")
     _ensure(config.strategy.weight_method == "equal", "only equal weighting is supported for now")
     _ensure(config.strategy.ma_window > 0, "strategy.ma_window must be positive")
     _ensure(config.market_regime.ma_window > 0, "market_regime.ma_window must be positive")
+    _ensure(config.market_regime.on_confirm_weeks > 0, "market_regime.on_confirm_weeks must be positive")
+    _ensure(config.market_regime.off_confirm_weeks > 0, "market_regime.off_confirm_weeks must be positive")
     _ensure(config.market_regime.risk_off_action in {"flat", "reduce"},
             "market_regime.risk_off_action must be 'flat' or 'reduce'")
     _ensure(0.0 <= config.market_regime.risk_off_exposure <= 1.0,

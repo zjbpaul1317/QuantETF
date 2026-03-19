@@ -23,21 +23,24 @@ class SignalRanker:
         frame["passed_liquidity"] = frame["avg_turnover"] >= self.config.universe.min_avg_turnover
         frame["passed_trend"] = frame["close"] > frame[self.ma_column]
         frame["passed_score"] = frame["score"] > self.score_threshold
-        frame["eligible"] = (
-            frame["passed_listing"]
-            & frame["passed_liquidity"]
-            & frame["passed_trend"]
-            & frame["passed_score"]
-        )
+        frame["eligible"] = frame["passed_listing"] & frame["passed_liquidity"]
+        frame["primary_candidate"] = frame["eligible"] & frame["passed_trend"] & frame["passed_score"]
+        frame["secondary_candidate"] = frame["eligible"] & ~frame["primary_candidate"]
 
         frame["rank"] = pd.Series(pd.NA, index=frame.index, dtype="Int64")
         eligible = frame["eligible"]
         if eligible.any():
-            eligible_ranks = frame.loc[eligible].groupby(level="trade_date")["score"].rank(
-                ascending=False,
-                method="first",
+            ranked = (
+                frame.loc[eligible]
+                .reset_index()
+                .sort_values(
+                    ["trade_date", "primary_candidate", "passed_trend", "passed_score", "score", "symbol"],
+                    ascending=[True, False, False, False, False, True],
+                )
             )
-            frame.loc[eligible, "rank"] = eligible_ranks.astype("Int64")
+            ranked["rank"] = ranked.groupby("trade_date").cumcount() + 1
+            frame.loc[ranked.set_index(["trade_date", "symbol"]).index, "rank"] = ranked["rank"].to_numpy(dtype="int64")
+            frame["rank"] = frame["rank"].astype("Int64")
 
         frame["hold_signal"] = frame["eligible"] & frame["rank"].le(self.hold_buffer_n).fillna(False)
         frame["buy_signal"] = frame["eligible"] & frame["rank"].le(self.buy_top_n).fillna(False)

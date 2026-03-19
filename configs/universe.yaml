@@ -2,12 +2,18 @@ universe:
   symbols:
     - 510300.SH
     - 510500.SH
-    - 159915.SZ
-    - 159949.SZ
     - 512100.SH
+    - 159915.SZ
+    - 588080.SH
+    - 510880.SH
     - 512880.SH
-    - 515790.SH
+    - 159995.SZ
+    - 512010.SH
+    - 159928.SZ
+    - 512660.SH
     - 516160.SH
+    - 530880.SH
+    - 515300.SH
   blacklist: []
   min_listed_days: 120
   liquidity_lookback: 20
@@ -19,5 +25,8 @@ market_regime:
   hs300_symbol: 510300.SH
   zz1000_symbol: 512100.SH
   ma_window: 60
-  risk_off_action: flat
-  risk_off_exposure: 0.0
+  require_positive_score: true
+  on_confirm_weeks: 2
+  off_confirm_weeks: 1
+  risk_off_action: reduce
+  risk_off_exposure: 0.34

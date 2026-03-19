@@ -1,20 +1,20 @@
 {
   "metrics": {
-    "cumulative_return": 0.15566158971647592,
-    "annual_return": 0.05142669052110027,
-    "annual_volatility": 0.22420380445798563,
-    "max_drawdown": -0.29810419967885016,
-    "sharpe_ratio": 0.24509954621549518,
-    "calmar_ratio": 0.17251246569656725,
-    "win_rate": 0.7169811320754716,
-    "average_holding_period": 43.4836473167341,
-    "annual_turnover_rate": 7.488791721900956,
-    "turnover_rate": 21.6045697691349,
-    "total_return": 0.15566158971647592
+    "cumulative_return": 0.0926189087634357,
+    "annual_return": 0.03117982898102567,
+    "annual_volatility": 0.1583386453453915,
+    "max_drawdown": -0.2683708665930912,
+    "sharpe_ratio": 0.14745137748674306,
+    "calmar_ratio": 0.11618186942884937,
+    "win_rate": 0.6595744680851063,
+    "average_holding_period": 75.37607871338912,
+    "annual_turnover_rate": 4.925678824072734,
+    "turnover_rate": 14.210192480559037,
+    "total_return": 0.0926189087634357
   },
   "conclusions": {
-    "return_source": "收益大概率来自周频动量轮动对上涨ETF的持续跟随，前几次强收益日合计贡献约 46.24%，说明净值主要由少数趋势延续阶段驱动。",
+    "return_source": "收益大概率来自周频动量轮动对上涨ETF的持续跟随，前几次强收益日合计贡献约 24.07%，说明净值主要由少数趋势延续阶段驱动。",
     "drawdown_source": "最大回撤更可能来自多只ETF同步走弱时的组合性回撤，最深回撤附近日期为 2025-04-07。",
-    "turnover_assessment": "存在较明显的过度换手风险，建议进一步加强缓冲持有或调低调仓敏感度。"
+    "turnover_assessment": "换手率偏高但仍在周频策略常见范围内，可以继续观察交易成本侵蚀。"
   }
 }

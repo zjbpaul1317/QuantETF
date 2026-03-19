@@ -9,7 +9,7 @@ from quant_etf.config.schema import AppConfig
 from quant_etf.data import ETFDataRepository
 from quant_etf.portfolio import RebalancePlanner, TargetPortfolioBuilder
 from quant_etf.report import export_backtest_bundle
-from quant_etf.signal import SignalEngine
+from quant_etf.signal import MarketRegimeAssessor, SignalEngine
 
 
 @dataclass(frozen=True)
@@ -38,7 +38,7 @@ def run_backtest_with_config(
 ) -> PipelineResult:
     history = ETFDataRepository(config).load_history()
     signal_result = SignalEngine(config).generate(history)
-    weekly_signals = signal_result.weekly_signals
+    weekly_signals = MarketRegimeAssessor(config).attach(signal_result.weekly_signals)
     target_portfolio = TargetPortfolioBuilder(config).build_all(weekly_signals)
 
     rebalance_dates = sorted(weekly_signals["date"].dropna().unique()) if not weekly_signals.empty else []
@@ -81,7 +81,7 @@ def run_signal_pipeline(
 ) -> SignalPipelineResult:
     history = ETFDataRepository(config).load_history()
     signal_result = SignalEngine(config).generate(history)
-    weekly_signals = signal_result.weekly_signals
+    weekly_signals = MarketRegimeAssessor(config).attach(signal_result.weekly_signals)
     latest_target = TargetPortfolioBuilder(config).build(
         weekly_signals,
         current_holdings=current_holdings,

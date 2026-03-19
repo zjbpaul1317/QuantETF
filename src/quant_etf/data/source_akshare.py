@@ -18,11 +18,16 @@ from .source_base import ETFHistoryDataSource
 logger = logging.getLogger(__name__)
 
 
+class _AkShareSymbolFetchAborted(RuntimeError):
+    """Raised when a symbol keeps failing and should be skipped for this run."""
+
+
 class AkShareETFSource(ETFHistoryDataSource):
     """Fetch and cache ETF daily history from AkShare."""
 
     CHUNK_DAYS = 120
     SINGLE_DAY_PADDING_DAYS = 3
+    MAX_CONSECUTIVE_SINGLE_DAY_FAILURES = 5
     MAX_RETRIES = 3
     REQUEST_PAUSE_SECONDS = 0.5
     DEFAULT_START_DATE = "2000-01-01"
@@ -100,14 +105,23 @@ class AkShareETFSource(ETFHistoryDataSource):
         fetch_ranges = self._determine_fetch_ranges(cached, start_dt, end_dt)
 
         fetched_frames: list[pd.DataFrame] = []
+        failure_state = {
+            "consecutive_single_day_failures": 0,
+            "last_failed_date": None,
+        }
         for fetch_start, fetch_end in fetch_ranges:
-            fetched = self._fetch_symbol_range(
-                ak=ak,
-                symbol=symbol,
-                start_dt=fetch_start,
-                end_dt=fetch_end,
-                adjust=adjust,
-            )
+            try:
+                fetched = self._fetch_symbol_range(
+                    ak=ak,
+                    symbol=symbol,
+                    start_dt=fetch_start,
+                    end_dt=fetch_end,
+                    adjust=adjust,
+                    failure_state=failure_state,
+                )
+            except _AkShareSymbolFetchAborted as exc:
+                logger.warning("Skipping %s for this run after repeated AkShare failures: %s", symbol, exc)
+                return self._empty_frame()
             if not fetched.empty:
                 fetched_frames.append(fetched)
 
@@ -157,6 +171,7 @@ class AkShareETFSource(ETFHistoryDataSource):
         start_dt: datetime,
         end_dt: datetime,
         adjust: str,
+        failure_state: dict[str, Any],
     ) -> pd.DataFrame:
         if start_dt > end_dt:
             return self._empty_frame()
@@ -172,6 +187,7 @@ class AkShareETFSource(ETFHistoryDataSource):
                     start_dt=current_start,
                     end_dt=current_end,
                     adjust=adjust,
+                    failure_state=failure_state,
                 )
             )
             current_start = current_end + timedelta(days=1)
@@ -185,6 +201,7 @@ class AkShareETFSource(ETFHistoryDataSource):
         start_dt: datetime,
         end_dt: datetime,
         adjust: str,
+        failure_state: dict[str, Any],
     ) -> list[pd.DataFrame]:
         if start_dt > end_dt:
             return []
@@ -211,8 +228,10 @@ class AkShareETFSource(ETFHistoryDataSource):
                 adjust=adjust,
             )
             if not fallback.empty:
+                self._reset_failure_streak(failure_state)
                 return [fallback]
             if span_days <= 1:
+                self._record_single_day_failure(failure_state, start_dt, symbol)
                 logger.warning(
                     "Skipping unresolved AkShare single-day window for %s on %s after retries: %s",
                     symbol,
@@ -229,8 +248,22 @@ class AkShareETFSource(ETFHistoryDataSource):
                 end_dt.strftime("%Y-%m-%d"),
             )
             return [
-                *self._fetch_range_resilient(ak=ak, symbol=symbol, start_dt=start_dt, end_dt=midpoint, adjust=adjust),
-                *self._fetch_range_resilient(ak=ak, symbol=symbol, start_dt=midpoint + timedelta(days=1), end_dt=end_dt, adjust=adjust),
+                *self._fetch_range_resilient(
+                    ak=ak,
+                    symbol=symbol,
+                    start_dt=start_dt,
+                    end_dt=midpoint,
+                    adjust=adjust,
+                    failure_state=failure_state,
+                ),
+                *self._fetch_range_resilient(
+                    ak=ak,
+                    symbol=symbol,
+                    start_dt=midpoint + timedelta(days=1),
+                    end_dt=end_dt,
+                    adjust=adjust,
+                    failure_state=failure_state,
+                ),
             ]
 
         if frame is None or frame.empty:
@@ -243,9 +276,35 @@ class AkShareETFSource(ETFHistoryDataSource):
                     adjust=adjust,
                 )
                 if not fallback.empty:
+                    self._reset_failure_streak(failure_state)
                     return [fallback]
+            self._reset_failure_streak(failure_state)
             return []
+        self._reset_failure_streak(failure_state)
         return [self._normalize_remote_frame(frame, symbol)]
+
+    def _record_single_day_failure(
+        self,
+        failure_state: dict[str, Any],
+        failed_dt: datetime,
+        symbol: str,
+    ) -> None:
+        previous_failed_dt = failure_state.get("last_failed_date")
+        if previous_failed_dt is not None and failed_dt.date() == (previous_failed_dt.date() + timedelta(days=1)):
+            failure_state["consecutive_single_day_failures"] = int(failure_state.get("consecutive_single_day_failures", 0)) + 1
+        else:
+            failure_state["consecutive_single_day_failures"] = 1
+        failure_state["last_failed_date"] = failed_dt
+
+        if int(failure_state["consecutive_single_day_failures"]) >= self.MAX_CONSECUTIVE_SINGLE_DAY_FAILURES:
+            raise _AkShareSymbolFetchAborted(
+                f"{symbol} hit {failure_state['consecutive_single_day_failures']} consecutive unresolved single-day failures"
+            )
+
+    @staticmethod
+    def _reset_failure_streak(failure_state: dict[str, Any]) -> None:
+        failure_state["consecutive_single_day_failures"] = 0
+        failure_state["last_failed_date"] = None
 
     def _fetch_with_retry(
         self,

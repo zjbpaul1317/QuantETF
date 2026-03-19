@@ -11,9 +11,15 @@ from quant_etf.data import AkShareETFSource, DataLoadRequest
 
 
 class FakeAkShareClient:
-    def __init__(self, max_span_days: int | None = None, fail_exact_days: set[str] | None = None) -> None:
+    def __init__(
+        self,
+        max_span_days: int | None = None,
+        fail_exact_days: set[str] | None = None,
+        always_fail_symbols: set[str] | None = None,
+    ) -> None:
         self.max_span_days = max_span_days
         self.fail_exact_days = fail_exact_days or set()
+        self.always_fail_symbols = always_fail_symbols or set()
         self.calls: list[dict[str, object]] = []
         self.dataset = pd.DataFrame(
             [
@@ -42,6 +48,8 @@ class FakeAkShareClient:
         start = pd.Timestamp(start_date)
         end = pd.Timestamp(end_date)
         span_days = (end - start).days + 1
+        if symbol in self.always_fail_symbols:
+            raise RuntimeError("simulated symbol-wide disconnect")
         if start_date == end_date and start_date in self.fail_exact_days:
             raise RuntimeError("simulated single-day disconnect")
         if self.max_span_days is not None and span_days > self.max_span_days:
@@ -246,3 +254,27 @@ def test_akshare_source_recovers_single_day_with_padded_window(tmp_path: Path) -
     requested_ranges = [(call["start_date"], call["end_date"]) for call in client.calls]
     assert ("20240103", "20240103") in requested_ranges
     assert ("20231231", "20240106") in requested_ranges
+
+
+def test_akshare_source_skips_symbol_after_consecutive_failures(tmp_path: Path) -> None:
+    source = _build_source(tmp_path)
+    source.MAX_CONSECUTIVE_SINGLE_DAY_FAILURES = 3
+    client = FakeAkShareClient(always_fail_symbols={"588080"})
+    original = _install_fake_akshare(client)
+
+    try:
+        frame = source.load_bars(
+            DataLoadRequest(
+                symbols=["510300.SH", "588080.SH"],
+                start_date="2024-01-02",
+                end_date="2024-01-08",
+            )
+        )
+    finally:
+        _restore_fake_akshare(original)
+
+    assert frame["symbol"].unique().tolist() == ["510300.SH"]
+    failed_symbol_calls = [call for call in client.calls if call["symbol"] == "588080"]
+    assert failed_symbol_calls
+    assert not (tmp_path / "588080.SH.csv").exists()
+    assert (tmp_path / "510300.SH.csv").exists()

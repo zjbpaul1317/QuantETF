@@ -73,6 +73,8 @@ class SignalEngine:
             "passed_liquidity",
             "passed_trend",
             "passed_score",
+            "primary_candidate",
+            "secondary_candidate",
         ]
         ordered_columns = self.DAILY_SIGNAL_COLUMNS + extra_columns
         existing_columns = [column for column in ordered_columns if column in frame.columns]
