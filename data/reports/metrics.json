@@ -1,0 +1,13 @@
+{
+  "cumulative_return": 0.15566158971647592,
+  "annual_return": 0.05142669052110027,
+  "annual_volatility": 0.22420380445798563,
+  "max_drawdown": -0.29810419967885016,
+  "sharpe_ratio": 0.24509954621549518,
+  "calmar_ratio": 0.17251246569656725,
+  "win_rate": 0.7169811320754716,
+  "average_holding_period": 43.4836473167341,
+  "annual_turnover_rate": 7.488791721900956,
+  "turnover_rate": 21.6045697691349,
+  "total_return": 0.15566158971647592
+}

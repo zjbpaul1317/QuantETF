@@ -1,0 +1,17 @@
+QuantETF Backtest Summary
+Cumulative Return    : 15.57%
+Annual Return : 5.14%
+Annual Vol    : 22.42%
+Max Drawdown  : -29.81%
+Sharpe Ratio  : 0.2451
+Calmar Ratio  : 0.1725
+Win Rate      : 71.70%
+Avg Hold Days : 43.48
+Annual Turnover : 748.88%
+Turnover Rate : 2160.46%
+Total Return  : 15.57%
+
+Conclusions
+- Return Source   : 收益大概率来自周频动量轮动对上涨ETF的持续跟随，前几次强收益日合计贡献约 46.24%，说明净值主要由少数趋势延续阶段驱动。
+- Drawdown Source : 最大回撤更可能来自多只ETF同步走弱时的组合性回撤，最深回撤附近日期为 2025-04-07。
+- Turnover Check  : 存在较明显的过度换手风险，建议进一步加强缓冲持有或调低调仓敏感度。
