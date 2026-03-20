@@ -75,9 +75,16 @@ class TargetPortfolioBuilder:
             )
             target_exposure = self._determine_target_exposure(len(target_symbols))
 
-        target_weights = self.allocator.allocate(target_symbols, total_exposure=target_exposure)
+        target_weights = self.allocator.allocate(
+            target_symbols,
+            total_exposure=target_exposure,
+            signal_snapshot=snapshot.loc[snapshot["symbol"].isin(target_symbols)].copy(),
+        )
+        snapshot_columns = ["symbol", "date", "score", "rank"]
+        if "volatility_20" in snapshot.columns:
+            snapshot_columns.append("volatility_20")
         target = target_weights.merge(
-            snapshot[["symbol", "date", "score", "rank"]],
+            snapshot[snapshot_columns],
             on="symbol",
             how="left",
         )
@@ -97,7 +104,7 @@ class TargetPortfolioBuilder:
             return self._empty_target_table()
 
         frame["date"] = pd.to_datetime(frame["date"])
-        rebalance_dates = sorted(frame["date"].dropna().unique())
+        rebalance_dates = sorted(frame["date"].dropna().unique())[:: self.config.strategy.rebalance_interval_weeks]
         current_holdings = normalize_holdings(initial_holdings)
         all_targets: list[pd.DataFrame] = []
 
@@ -275,6 +282,7 @@ class TargetPortfolioBuilder:
                 "target_weight": pd.Series(dtype="float64"),
                 "score": pd.Series(dtype="float64"),
                 "rank": pd.Series(dtype="Int64"),
+                "volatility_20": pd.Series(dtype="float64"),
                 "hold_reason": pd.Series(dtype="object"),
             }
         )
@@ -288,6 +296,7 @@ class TargetPortfolioBuilder:
                 "target_weight": pd.Series(dtype="float64"),
                 "score": pd.Series(dtype="float64"),
                 "rank": pd.Series(dtype="Int64"),
+                "volatility_20": pd.Series(dtype="float64"),
                 "hold_reason": pd.Series(dtype="object"),
             }
         )

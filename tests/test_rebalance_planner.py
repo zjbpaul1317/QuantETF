@@ -24,6 +24,7 @@ def _build_portfolio_test_config():
             enable_buffer_hold=True,
             stoploss_ma_ratio=0.98,
             signal_weekday=4,
+            weight_method="equal",
         ),
         universe=replace(
             config.universe,
@@ -206,6 +207,31 @@ def test_target_portfolio_builder_fully_allocates_two_symbol_portfolio() -> None
     assert np.isclose(target["target_weight"].sum(), 0.99)
     assert np.isclose(target["target_weight"].iloc[0], 0.495)
     assert np.isclose(target["target_weight"].iloc[1], 0.495)
+
+
+def test_target_portfolio_builder_supports_inverse_volatility_weights() -> None:
+    config = replace(
+        _build_portfolio_test_config(),
+        strategy=replace(_build_portfolio_test_config().strategy, weight_method="inverse_volatility"),
+    )
+    signals = pd.DataFrame(
+        {
+            "date": [pd.Timestamp("2024-07-05"), pd.Timestamp("2024-07-05")],
+            "symbol": ["510300.SH", "159915.SZ"],
+            "score": [0.1, 0.09],
+            "rank": [1, 2],
+            "buy_signal": [True, True],
+            "close": [1.0, 1.0],
+            "ma60": [0.9, 0.9],
+            "volatility_20": [0.10, 0.20],
+            "market_regime_on": [True, True],
+        }
+    )
+
+    target = TargetPortfolioBuilder(config).build(signals)
+
+    assert np.isclose(target["target_weight"].sum(), 0.99)
+    assert target.set_index("symbol").loc["510300.SH", "target_weight"] > target.set_index("symbol").loc["159915.SZ", "target_weight"]
 
 
 def test_target_portfolio_builder_keeps_incumbent_when_score_edge_is_small() -> None:

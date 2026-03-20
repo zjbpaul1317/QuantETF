@@ -69,7 +69,14 @@ def test_target_builder_build_all_tracks_rebalance_dates() -> None:
     config = load_app_config("configs", env_prefix=None)
     config = replace(
         config,
-        strategy=replace(config.strategy, buy_top_n=2, hold_buffer_n=3, enable_buffer_hold=True),
+        strategy=replace(
+            config.strategy,
+            buy_top_n=2,
+            hold_buffer_n=3,
+            enable_buffer_hold=True,
+            rebalance_interval_weeks=1,
+            weight_method="equal",
+        ),
         universe=replace(config.universe, min_listed_days=1, min_avg_turnover=0.0),
     )
     signals["hold_signal"] = True
@@ -80,6 +87,49 @@ def test_target_builder_build_all_tracks_rebalance_dates() -> None:
     targets = TargetPortfolioBuilder(config).build_all(signals)
 
     assert sorted(targets["rebalance_date"].dt.strftime("%Y-%m-%d").unique().tolist()) == ["2024-01-05", "2024-01-12"]
+
+
+def test_target_builder_build_all_respects_rebalance_interval() -> None:
+    signals = pd.DataFrame(
+        {
+            "date": [
+                pd.Timestamp("2024-01-05"),
+                pd.Timestamp("2024-01-05"),
+                pd.Timestamp("2024-01-12"),
+                pd.Timestamp("2024-01-12"),
+                pd.Timestamp("2024-01-19"),
+                pd.Timestamp("2024-01-19"),
+            ],
+            "symbol": ["A.SH", "B.SH", "A.SH", "C.SH", "B.SH", "C.SH"],
+            "score": [0.10, 0.09, 0.11, 0.10, 0.12, 0.11],
+            "rank": [1, 2, 1, 2, 1, 2],
+            "buy_signal": [True, True, True, True, True, True],
+            "close": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+            "ma60": [0.9, 0.9, 0.9, 0.9, 0.9, 0.9],
+            "volatility_20": [0.10, 0.15, 0.10, 0.15, 0.10, 0.15],
+            "hold_signal": [True, True, True, True, True, True],
+            "eligible": [True, True, True, True, True, True],
+            "market_regime_on": [True, True, True, True, True, True],
+            "risk_off": [False, False, False, False, False, False],
+        }
+    )
+    config = load_app_config("configs", env_prefix=None)
+    config = replace(
+        config,
+        strategy=replace(
+            config.strategy,
+            buy_top_n=2,
+            hold_buffer_n=3,
+            enable_buffer_hold=True,
+            rebalance_interval_weeks=2,
+            weight_method="equal",
+        ),
+        universe=replace(config.universe, min_listed_days=1, min_avg_turnover=0.0),
+    )
+
+    targets = TargetPortfolioBuilder(config).build_all(signals)
+
+    assert sorted(targets["rebalance_date"].dt.strftime("%Y-%m-%d").unique().tolist()) == ["2024-01-05", "2024-01-19"]
 
 
 def test_run_backtest_with_config_exports_full_bundle(tmp_path: Path) -> None:

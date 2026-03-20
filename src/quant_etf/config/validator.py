@@ -23,6 +23,7 @@ def validate_app_config(config: AppConfig) -> None:
             "data.file_pattern must contain {symbol} and {ext}")
     _ensure(config.strategy.rebalance_frequency == "weekly", "strategy.rebalance_frequency must be 'weekly'")
     _ensure(config.strategy.signal_weekday == 4, "strategy.signal_weekday must be 4 for Friday close signals")
+    _ensure(config.strategy.rebalance_interval_weeks > 0, "strategy.rebalance_interval_weeks must be positive")
     _ensure(len(config.strategy.lookback_windows) == 3, "strategy.lookback_windows must contain 3 windows")
     _ensure(len(config.strategy.score_weights) == 3, "strategy.score_weights must contain 3 weights")
     _ensure(abs(sum(config.strategy.score_weights) - 1.0) < 1e-8, "strategy.score_weights must sum to 1.0")
@@ -47,7 +48,10 @@ def validate_app_config(config: AppConfig) -> None:
     _ensure(0.0 <= config.strategy.min_rebalance_weight_delta <= 1.0,
             "strategy.min_rebalance_weight_delta must be within [0, 1]")
     _ensure(config.strategy.min_score_upgrade >= 0.0, "strategy.min_score_upgrade must be non-negative")
-    _ensure(config.strategy.weight_method == "equal", "only equal weighting is supported for now")
+    _ensure(
+        config.strategy.weight_method in {"equal", "inverse_volatility"},
+        "strategy.weight_method must be 'equal' or 'inverse_volatility'",
+    )
     _ensure(config.strategy.ma_window > 0, "strategy.ma_window must be positive")
     _ensure(config.market_regime.ma_window > 0, "market_regime.ma_window must be positive")
     _ensure(config.market_regime.on_confirm_weeks > 0, "market_regime.on_confirm_weeks must be positive")

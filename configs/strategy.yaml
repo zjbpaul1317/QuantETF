@@ -1,20 +1,21 @@
 strategy:
   rebalance_frequency: weekly
   signal_weekday: 4
+  rebalance_interval_weeks: 2
   execution_delay_days: 1
   execution_timing: next_open
   lookback_windows: [20, 60, 120]
   score_weights: [0.4, 0.4, 0.2]
-  ma_window: 60
-  score_threshold: 0.0
+  ma_window: 100
+  score_threshold: 0.01
   buy_top_n: 3
   hold_buffer_n: 6
   enable_buffer_hold: true
   stoploss_ma_ratio: 0.98
   exit_confirm_weeks: 2
-  min_rebalance_weight_delta: 0.10
-  min_score_upgrade: 0.02
-  weight_method: equal
+  min_rebalance_weight_delta: 0.15
+  min_score_upgrade: 0.04
+  weight_method: inverse_volatility
 
 trading:
   lot_size: 100

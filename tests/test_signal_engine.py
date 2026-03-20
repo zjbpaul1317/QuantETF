@@ -16,6 +16,7 @@ def _build_signal_test_config():
             ma_window=60,
             lookback_windows=(20, 60, 120),
             score_weights=(0.4, 0.4, 0.2),
+            score_threshold=0.0,
             buy_top_n=3,
             signal_weekday=4,
         ),

@@ -87,6 +87,7 @@ class MarketRegimeConfig:
 class StrategyConfig:
     rebalance_frequency: str = "weekly"
     signal_weekday: int = 4
+    rebalance_interval_weeks: int = 1
     execution_delay_days: int = 1
     execution_timing: str = "next_open"
     lookback_windows: tuple[int, int, int] = (20, 60, 120)
@@ -241,6 +242,7 @@ class AppConfig:
             strategy=StrategyConfig(
                 rebalance_frequency=strategy_raw.get("rebalance_frequency", "weekly"),
                 signal_weekday=int(strategy_raw.get("signal_weekday", 4)),
+                rebalance_interval_weeks=int(strategy_raw.get("rebalance_interval_weeks", 1)),
                 execution_delay_days=int(strategy_raw.get("execution_delay_days", 1)),
                 execution_timing=strategy_raw.get("execution_timing", "next_open"),
                 lookback_windows=tuple(int(v) for v in strategy_raw.get("lookback_windows", [20, 60, 120])),

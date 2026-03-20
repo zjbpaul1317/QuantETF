@@ -56,7 +56,11 @@ class RebalancePlanner:
             as_of_date=as_of_date,
         )
         if total_exposure is not None and not target_portfolio.empty:
-            scaled = self.allocator.allocate(target_portfolio["symbol"].tolist(), total_exposure=total_exposure)
+            scaled = self.allocator.allocate(
+                target_portfolio["symbol"].tolist(),
+                total_exposure=total_exposure,
+                signal_snapshot=target_portfolio,
+            )
             target_portfolio = target_portfolio.drop(columns=["target_weight"]).merge(scaled, on="symbol", how="left")
         rebalance_plan = self._build_rebalance_plan(snapshot, holdings, target_portfolio, exit_evaluation)
         return RebalanceResult(

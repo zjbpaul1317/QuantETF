@@ -41,7 +41,11 @@ def run_backtest_with_config(
     weekly_signals = MarketRegimeAssessor(config).attach(signal_result.weekly_signals)
     target_portfolio = TargetPortfolioBuilder(config).build_all(weekly_signals)
 
-    rebalance_dates = sorted(weekly_signals["date"].dropna().unique()) if not weekly_signals.empty else []
+    rebalance_dates = (
+        sorted(target_portfolio["rebalance_date"].dropna().unique())
+        if not target_portfolio.empty
+        else []
+    )
     backtest_result = BacktestEngine(config).run(
         history=history,
         target_portfolio=target_portfolio,
