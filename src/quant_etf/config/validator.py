@@ -30,8 +30,21 @@ def validate_app_config(config: AppConfig) -> None:
     _ensure(all(window > 0 for window in config.strategy.lookback_windows), "lookback windows must be positive")
     _ensure(config.strategy.lookback_windows == tuple(sorted(config.strategy.lookback_windows)),
             "strategy.lookback_windows must be sorted ascending")
-    _ensure(config.universe.min_listed_days >= max(config.strategy.lookback_windows),
-            "universe.min_listed_days must cover the longest lookback window")
+    _ensure(config.strategy.bias_ma_window > 0, "strategy.bias_ma_window must be positive")
+    _ensure(config.strategy.bias_regression_window > 1, "strategy.bias_regression_window must be > 1")
+    _ensure(config.strategy.slope_window > 1, "strategy.slope_window must be > 1")
+    _ensure(config.strategy.efficiency_window > 1, "strategy.efficiency_window must be > 1")
+    minimum_required_history = max(
+        max(config.strategy.lookback_windows),
+        config.strategy.ma_window,
+        config.strategy.bias_ma_window + config.strategy.bias_regression_window - 1,
+        config.strategy.slope_window,
+        config.strategy.efficiency_window,
+    )
+    _ensure(
+        config.universe.min_listed_days >= minimum_required_history,
+        "universe.min_listed_days must cover the longest strategy lookback window",
+    )
     _ensure(config.strategy.buy_top_n > 0, "strategy.buy_top_n must be positive")
     _ensure(config.strategy.hold_buffer_n >= config.strategy.buy_top_n,
             "strategy.hold_buffer_n must be >= strategy.buy_top_n")
@@ -48,6 +61,8 @@ def validate_app_config(config: AppConfig) -> None:
     _ensure(0.0 <= config.strategy.min_rebalance_weight_delta <= 1.0,
             "strategy.min_rebalance_weight_delta must be within [0, 1]")
     _ensure(config.strategy.min_score_upgrade >= 0.0, "strategy.min_score_upgrade must be non-negative")
+    _ensure(config.strategy.min_score_challenge_ratio >= 1.0,
+            "strategy.min_score_challenge_ratio must be >= 1.0")
     _ensure(
         config.strategy.weight_method in {"equal", "inverse_volatility"},
         "strategy.weight_method must be 'equal' or 'inverse_volatility'",

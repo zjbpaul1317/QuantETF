@@ -27,6 +27,7 @@ class TargetPortfolioBuilder:
         self.allocator = allocator or EqualWeightAllocator(config)
         self.min_weight_delta = float(config.strategy.min_rebalance_weight_delta)
         self.min_score_upgrade = float(config.strategy.min_score_upgrade)
+        self.min_score_challenge_ratio = float(config.strategy.min_score_challenge_ratio)
 
     def build(
         self,
@@ -205,7 +206,7 @@ class TargetPortfolioBuilder:
 
             challenger_score = float(challenger.score) if pd.notna(challenger.score) else -np.inf
             incumbent_score = float(row.score) if pd.notna(row.score) else -np.inf
-            if challenger_score < incumbent_score + self.min_score_upgrade:
+            if not self._is_challenger_strong_enough(challenger_score, incumbent_score):
                 selected.append(row.symbol)
                 hold_reason_map[row.symbol] = "keep_small_edge"
                 buy_index -= 1
@@ -228,6 +229,15 @@ class TargetPortfolioBuilder:
             selected = selected[: self.config.strategy.buy_top_n]
 
         return selected, hold_reason_map
+
+    def _is_challenger_strong_enough(self, challenger_score: float, incumbent_score: float) -> bool:
+        if not np.isfinite(challenger_score):
+            return False
+        if not np.isfinite(incumbent_score):
+            return True
+        if incumbent_score > 0:
+            return challenger_score >= incumbent_score * self.min_score_challenge_ratio
+        return challenger_score >= incumbent_score + self.min_score_upgrade
 
     def _determine_target_exposure(self, selected_count: int) -> float:
         if selected_count <= 0:

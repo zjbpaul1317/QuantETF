@@ -92,6 +92,10 @@ class StrategyConfig:
     execution_timing: str = "next_open"
     lookback_windows: tuple[int, int, int] = (20, 60, 120)
     score_weights: tuple[float, float, float] = (0.4, 0.4, 0.2)
+    bias_ma_window: int = 100
+    bias_regression_window: int = 20
+    slope_window: int = 20
+    efficiency_window: int = 20
     ma_window: int = 60
     score_threshold: float = 0.0
     buy_top_n: int = 3
@@ -101,6 +105,7 @@ class StrategyConfig:
     exit_confirm_weeks: int = 2
     min_rebalance_weight_delta: float = 0.10
     min_score_upgrade: float = 0.02
+    min_score_challenge_ratio: float = 1.5
     weight_method: str = "equal"
 
 
@@ -247,6 +252,10 @@ class AppConfig:
                 execution_timing=strategy_raw.get("execution_timing", "next_open"),
                 lookback_windows=tuple(int(v) for v in strategy_raw.get("lookback_windows", [20, 60, 120])),
                 score_weights=tuple(float(v) for v in strategy_raw.get("score_weights", [0.4, 0.4, 0.2])),
+                bias_ma_window=int(strategy_raw.get("bias_ma_window", 100)),
+                bias_regression_window=int(strategy_raw.get("bias_regression_window", 20)),
+                slope_window=int(strategy_raw.get("slope_window", 20)),
+                efficiency_window=int(strategy_raw.get("efficiency_window", 20)),
                 ma_window=int(strategy_raw.get("ma_window", 60)),
                 score_threshold=float(strategy_raw.get("score_threshold", 0.0)),
                 buy_top_n=int(strategy_raw.get("buy_top_n", 3)),
@@ -256,6 +265,7 @@ class AppConfig:
                 exit_confirm_weeks=int(strategy_raw.get("exit_confirm_weeks", 2)),
                 min_rebalance_weight_delta=float(strategy_raw.get("min_rebalance_weight_delta", 0.10)),
                 min_score_upgrade=float(strategy_raw.get("min_score_upgrade", 0.02)),
+                min_score_challenge_ratio=float(strategy_raw.get("min_score_challenge_ratio", 1.5)),
                 weight_method=strategy_raw.get("weight_method", "equal"),
             ),
             trading=TradingConfig(

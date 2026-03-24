@@ -19,6 +19,10 @@ def _build_portfolio_test_config():
             ma_window=60,
             lookback_windows=(20, 60, 120),
             score_weights=(0.4, 0.4, 0.2),
+            bias_ma_window=60,
+            bias_regression_window=20,
+            slope_window=20,
+            efficiency_window=20,
             buy_top_n=3,
             hold_buffer_n=6,
             enable_buffer_hold=True,
@@ -99,7 +103,7 @@ def test_exit_filter_flags_sell_conditions() -> None:
     assert "rank_out_of_buffer_2w" in reason_map["CCC.SH"]
 
 
-def test_rebalance_planner_keeps_buffer_name_and_fills_open_slots() -> None:
+def test_rebalance_planner_replaces_weak_incumbent_and_fills_open_slots() -> None:
     config = _build_portfolio_test_config()
     history = _build_portfolio_history()
     weekly_signals = MarketRegimeAssessor(config).attach(SignalEngine(config).generate(history).weekly_signals)
@@ -116,13 +120,16 @@ def test_rebalance_planner_keeps_buffer_name_and_fills_open_slots() -> None:
     action_map = result.rebalance_plan.set_index("symbol")["action"].to_dict()
     reason_map = result.rebalance_plan.set_index("symbol")["trade_reason"].to_dict()
 
-    assert target_symbols == ["510300.SH", "159915.SZ", "516160.SH"]
+    assert target_symbols == ["510300.SH", "159915.SZ", "510500.SH"]
     assert action_map["512100.SH"] == "sell"
     assert "score_non_positive_2w" in reason_map["512100.SH"]
+    assert action_map["516160.SH"] == "sell"
+    assert "score_non_positive_2w" in reason_map["516160.SH"]
     assert action_map["159915.SZ"] == "buy"
     assert reason_map["159915.SZ"] == "new_buy"
-    assert result.target_portfolio.set_index("symbol").loc["516160.SH", "hold_reason"] == "keep_buffer"
-    assert np.isclose(result.target_portfolio["target_weight"].sum(), 0.9966666666666666)
+    assert action_map["510500.SH"] == "buy"
+    assert reason_map["510500.SH"] == "new_buy"
+    assert np.isclose(result.target_portfolio["target_weight"].sum(), 0.9933333333333334)
 
 
 def test_target_portfolio_builder_supports_risk_off_and_disable_buffer_hold() -> None:
@@ -244,7 +251,7 @@ def test_target_portfolio_builder_keeps_incumbent_when_score_edge_is_small() -> 
         {
             "date": [pd.Timestamp("2024-06-28"), pd.Timestamp("2024-06-28"), pd.Timestamp("2024-07-05"), pd.Timestamp("2024-07-05")],
             "symbol": ["AAA.SH", "BBB.SH", "AAA.SH", "BBB.SH"],
-            "score": [0.011, 0.020, 0.011, 0.020],
+            "score": [0.011, 0.015, 0.011, 0.015],
             "rank": [3, 1, 3, 1],
             "buy_signal": [False, True, False, True],
             "close": [1.00, 1.00, 1.00, 1.00],

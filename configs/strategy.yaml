@@ -6,6 +6,10 @@ strategy:
   execution_timing: next_open
   lookback_windows: [20, 60, 120]
   score_weights: [0.4, 0.4, 0.2]
+  bias_ma_window: 100
+  bias_regression_window: 20
+  slope_window: 20
+  efficiency_window: 20
   ma_window: 100
   score_threshold: 0.01
   buy_top_n: 3
@@ -15,6 +19,7 @@ strategy:
   exit_confirm_weeks: 2
   min_rebalance_weight_delta: 0.15
   min_score_upgrade: 0.04
+  min_score_challenge_ratio: 1.5
   weight_method: inverse_volatility
 
 trading:
